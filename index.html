@@ -154,6 +154,8 @@
     -webkit-appearance:none;appearance:none;
   }
   .task.has-subtasks > .row-wrap > .task-row{cursor:pointer;}
+  .day:not(.dates-card):not(.lists-card) > .task-list > .task.has-subtasks > .row-wrap > .task-row .task-text{color:var(--accent);font-weight:700;}
+  .card-add-btn{background:none;border:none;color:#fff;font-size:22px;font-weight:600;line-height:1;padding:0 6px;flex-shrink:0;}
   .task-collapse-hit{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:9px;margin:-9px;}
   .task-collapse-arrow{
     background:none;border:none;color:var(--accent);font-weight:700;
@@ -1318,6 +1320,8 @@ function render(){
     dayEl.style.borderLeftColor = 'transparent';
     if(isWeekday) dayEl.classList.add('weekday-card');
     if(isOldBarStyle) dayEl.classList.add('weekday-card', 'pinned-card');
+    if(isDatesSection) dayEl.classList.add('dates-card');
+    if(isListsSection) dayEl.classList.add('lists-card');
     if(isCollapsedCard) dayEl.classList.add('card-collapsed');
 
     const header = document.createElement('div');
@@ -1361,6 +1365,19 @@ function render(){
     count.className = 'count';
     count.textContent = activeTasks.length ? String(activeTasks.length) : '';
     right.appendChild(count);
+
+    if(isDatesSection || isListsSection){
+      const addBtn = document.createElement('button');
+      addBtn.className = 'card-add-btn';
+      addBtn.textContent = '+';
+      addBtn.title = isDatesSection ? 'Add a date' : 'Add a list';
+      addBtn.addEventListener('click', e=>{
+        e.stopPropagation();
+        const ul = dayEl.querySelector(':scope > .task-list');
+        if(ul) startInlineAdd(ul, null, day.id);
+      });
+      right.appendChild(addBtn);
+    }
 
     if(isWeekday){
       const cardToggle = document.createElement('button');
@@ -1741,7 +1758,9 @@ function startInlineAdd(ul, parentTaskId, dayId){
   const row = document.createElement('div');
   row.className = 'task-row';
   const input = document.createElement('input');
-  input.placeholder = parentTaskId ? 'New subtask' : 'New task';
+  const addDay = dayId ? data.days.find(d => d.id === dayId) : null;
+  const addKey = addDay ? (addDay.label || '').trim().toUpperCase() : '';
+  input.placeholder = parentTaskId ? 'New subtask' : (addKey === 'DATES' ? 'New date' : addKey === 'LISTS' ? 'New list' : 'New task');
   input.style.cssText = 'flex:1;background:none;border:none;color:var(--text);font-size:13.5px;outline:none;';
   preventIOSZoom(input);
   row.appendChild(input);
