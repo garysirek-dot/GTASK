@@ -33,6 +33,34 @@
   .hero-banner svg{display:block;width:100%;height:100%;}
   #themesBtn{background:none;border:1px solid var(--line);color:var(--accent);font-size:12px;padding:5px 10px;border-radius:7px;}
   #themesBtn:active{background:var(--surface);}
+  .header-btns{display:flex;align-items:center;gap:8px;}
+  #dataBtn{background:none;border:1px solid var(--line);color:var(--text);font-size:12px;padding:5px 10px;border-radius:7px;display:inline-flex;align-items:center;gap:6px;}
+  #dataBtn:active{background:var(--surface);}
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+  .sync-dot.ok{background:#2ECC71;}
+  .sync-dot.pending{background:#FFB020;}
+  .sync-dot.error{background:#E5534B;}
+  .data-body{flex:1;overflow-y:auto;padding:6px 0 30px;}
+  .data-section{padding:16px;border-bottom:1px solid var(--line);}
+  .data-title{font-size:13px;font-weight:700;margin-bottom:6px;}
+  .data-note{font-size:12.5px;color:var(--text-dim);line-height:1.45;margin-bottom:12px;word-break:break-word;}
+  .data-row{display:flex;flex-wrap:wrap;gap:10px;}
+  .data-action{background:none;border:1px solid var(--line);color:var(--accent);font-size:13px;padding:8px 14px;border-radius:8px;}
+  .data-action:active{background:var(--surface);}
+  .data-action.danger{color:#C1584A;}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .overlay.opaque{background:var(--bg);}
+  .overlay-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;max-width:340px;width:100%;}
+  .overlay-card h3{margin:0 0 8px;font-size:16px;}
+  .overlay-card p{margin:0 0 14px;font-size:13px;color:var(--text-dim);line-height:1.45;}
+  .overlay-card input{width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--line);color:var(--text);font-size:16px;padding:10px 12px;border-radius:8px;margin-bottom:10px;outline:none;}
+  .overlay-card input:focus{border-color:var(--accent);}
+  .overlay-btns{display:flex;flex-direction:column;gap:8px;}
+  .overlay-btn{background:none;border:1px solid var(--line);color:var(--text);font-size:14px;padding:10px 12px;border-radius:8px;}
+  .overlay-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .auth-msg{font-size:12.5px;min-height:18px;margin:2px 0 10px;color:#E5534B;}
+  .auth-msg.info{color:var(--text-dim);}
+  .auth-skip{background:none;border:none;color:var(--text-dim);font-size:12.5px;text-decoration:underline;margin-top:12px;padding:4px;width:100%;}
   #themePicker{display:flex;flex-wrap:wrap;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);}
   .theme-option{
     flex:1 1 40%;min-width:120px;display:flex;flex-direction:column;align-items:center;gap:6px;
@@ -220,7 +248,7 @@
   #detailDeleteBtn{background:none;border:none;color:#C1584A;padding:2px 4px;display:flex;align-items:center;}
   .trash-header-actions{display:flex;align-items:center;gap:14px;}
   #trashEmptyBtn{background:none;border:1px solid var(--line);color:var(--text-dim);font-size:12px;padding:5px 10px;border-radius:6px;}
-  #trashCloseBtn, #completedCloseBtn, #searchCloseBtn{background:none;border:none;color:var(--text-dim);font-size:22px;padding:2px 4px;flex-shrink:0;}
+  #trashCloseBtn, #completedCloseBtn, #searchCloseBtn, #dataCloseBtn{background:none;border:none;color:var(--text-dim);font-size:22px;padding:2px 4px;flex-shrink:0;}
   .trash-list{flex:1;overflow-y:auto;padding:4px 0;}
   .trash-item{padding:10px 16px;border-bottom:1px solid var(--line);}
   .trash-item .t-text{font-size:13.5px;color:var(--text);word-break:break-word;}
@@ -283,7 +311,10 @@
 <div id="app">
   <header>
     <h1 id="appTitle" contenteditable="true" spellcheck="false"></h1>
-    <button id="themesBtn">Themes</button>
+    <div class="header-btns">
+      <button id="dataBtn">Data<span id="syncDot" class="sync-dot hidden"></span></button>
+      <button id="themesBtn">Themes</button>
+    </div>
   </header>
   <div id="themePicker" class="hidden">
     <button class="theme-option" data-color="orange">
@@ -366,6 +397,47 @@
   <div class="trash-list" id="trashList"></div>
 </div>
 
+<div id="dataPanel" class="side-panel">
+  <div class="trash-header">
+    <h2>Backup &amp; Account</h2>
+    <div class="trash-header-actions">
+      <button id="dataCloseBtn">×</button>
+    </div>
+  </div>
+  <div class="data-body">
+    <div class="data-section">
+      <div class="data-title">Backup</div>
+      <div class="data-note">Download everything (tasks, dates, lists, completed and deleted items) as a file you can keep, and restore it later.</div>
+      <div class="data-row">
+        <button class="data-action" id="exportBtn">Export backup</button>
+        <button class="data-action" id="importBtn">Import backup</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+      <div class="data-note" id="backupMsg" style="margin:10px 0 0;"></div>
+    </div>
+    <div class="data-section hidden" id="accountSection">
+      <div class="data-title">Account &amp; sync</div>
+      <div class="data-note" id="accountText"></div>
+      <div class="data-row" id="accountButtons"></div>
+    </div>
+  </div>
+</div>
+
+<div id="authOverlay" class="overlay opaque hidden">
+  <div class="overlay-card">
+    <h3>Sign in to sync</h3>
+    <p>Log in to see the same tasks on your phone and computer. New here? Pick a password and tap Create account.</p>
+    <input id="authEmail" type="email" placeholder="Email" autocomplete="email" autocapitalize="off" spellcheck="false">
+    <input id="authPassword" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
+    <div id="authMsg" class="auth-msg"></div>
+    <div class="overlay-btns">
+      <button id="authSignIn" class="overlay-btn primary">Sign in</button>
+      <button id="authSignUp" class="overlay-btn">Create account</button>
+    </div>
+    <button id="authSkip" class="auth-skip">Use on this device only</button>
+  </div>
+</div>
+
 <div id="completedPanel" class="side-panel">
   <div class="trash-header">
     <h2>Completed Tasks</h2>
@@ -427,7 +499,22 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
+// ---- Cloud sync setup (Supabase) ----
+// Paste your own Project URL and anon/public key between the quotes to turn on login + sync.
+// Leave them as-is and the app simply keeps data in this browser.
+const SUPABASE_URL = 'PASTE_YOUR_PROJECT_URL_HERE';
+const SUPABASE_ANON_KEY = 'PASTE_YOUR_ANON_KEY_HERE';
+
 const STORAGE_KEY = 'tasks-data-cards-v1';
+const hasClaudeStorage = (typeof window.storage !== 'undefined') && window.storage && typeof window.storage.get === 'function';
+async function storageGet(key){
+  if(hasClaudeStorage){ const r = await window.storage.get(key, false); return (r && r.value) ? r.value : null; }
+  try{ return localStorage.getItem(key); }catch(e){ return null; }
+}
+async function storageSet(key, val){
+  if(hasClaudeStorage){ await window.storage.set(key, val, false); return; }
+  localStorage.setItem(key, val);
+}
 let data = { days: [] };
 
 function uid(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
@@ -527,12 +614,19 @@ function defaultData(){
 }
 
 async function load(){
+  let loaded;
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    data = raw ? JSON.parse(raw) : defaultData();
+    const raw = await storageGet(STORAGE_KEY);
+    loaded = raw ? JSON.parse(raw) : defaultData();
   }catch(e){
-    data = defaultData();
+    loaded = defaultData();
   }
+  adoptData(loaded);
+}
+
+// Install a data object as the live app state (used for startup, cloud pulls and imports).
+function adoptData(obj){
+  data = (obj && Array.isArray(obj.days)) ? obj : defaultData();
   if(!Array.isArray(data.trash)) data.trash = [];
   data.days.forEach(d=>{
     const key = (d.label || '').trim().toUpperCase();
@@ -561,8 +655,9 @@ let saveTimer = null;
 function save(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+    try{ await storageSet(STORAGE_KEY, JSON.stringify(data)); }
     catch(e){ console.error('save failed', e); }
+    cloudMarkDirty();
   }, 250);
 }
 
@@ -1864,7 +1959,377 @@ document.getElementById('eyeBtn').addEventListener('click', ()=>{
   }
 });
 
-load();
+// ================= Backup (export / import) =================
+function setBackupMsg(text){ const el = document.getElementById('backupMsg'); if(el) el.textContent = text || ''; }
+
+function exportBackup(){
+  const payload = { app: 'task-manager-cards', format: 1, exportedAt: new Date().toISOString(), data: data };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tasks-backup-' + todayDateString() + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  setBackupMsg('Backup downloaded.');
+}
+
+async function importBackupFile(file){
+  if(!file) return;
+  let parsed;
+  try{ parsed = JSON.parse(await file.text()); }
+  catch(e){ setBackupMsg('That file could not be read as a backup.'); return; }
+  const incoming = (parsed && parsed.data && Array.isArray(parsed.data.days)) ? parsed.data
+                 : (parsed && Array.isArray(parsed.days)) ? parsed : null;
+  if(!incoming || !incoming.days.every(d => d && Array.isArray(d.tasks))){
+    setBackupMsg('That file does not look like a backup from this app.');
+    return;
+  }
+  const when = parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString() : 'an unknown date';
+  const choice = await askChoice('Restore this backup?',
+    'This replaces everything currently in the app with the backup from ' + when + '. Export first if you want to keep what is here now.',
+    [{ label: 'Replace with backup', value: 'yes', primary: true }, { label: 'Cancel', value: 'no' }]);
+  if(choice !== 'yes') return;
+  adoptData(incoming);
+  save();
+  setBackupMsg('Backup restored.');
+}
+
+function askChoice(title, message, options){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+    const card = document.createElement('div');
+    card.className = 'overlay-card';
+    const h = document.createElement('h3'); h.textContent = title; card.appendChild(h);
+    const p = document.createElement('p'); p.textContent = message; card.appendChild(p);
+    const btns = document.createElement('div'); btns.className = 'overlay-btns';
+    options.forEach(o=>{
+      const b = document.createElement('button');
+      b.className = 'overlay-btn' + (o.primary ? ' primary' : '');
+      b.textContent = o.label;
+      b.addEventListener('click', ()=>{ ov.remove(); resolve(o.value); });
+      btns.appendChild(b);
+    });
+    card.appendChild(btns);
+    ov.appendChild(card);
+    document.body.appendChild(ov);
+  });
+}
+
+// ================= Cloud sync (Supabase) =================
+const CLOUD_ENABLED = !hasClaudeStorage && /^https:\/\//.test(SUPABASE_URL) && SUPABASE_ANON_KEY.length > 20 && !/PASTE_/.test(SUPABASE_ANON_KEY);
+const CLOUD_VER_KEY = STORAGE_KEY + '-cloudver';
+const CLOUD_DIRTY_KEY = STORAGE_KEY + '-dirty';
+const CLOUD_SKIP_KEY = STORAGE_KEY + '-skipcloud';
+const cloud = { client: null, user: null, version: 0, pushTimer: null, pushing: false, status: 'off', msg: '' };
+try{ cloud.version = parseInt(localStorage.getItem(CLOUD_VER_KEY) || '0', 10) || 0; }catch(e){}
+
+function cloudActive(){ return CLOUD_ENABLED && !!cloud.client && !!cloud.user; }
+function isDirty(){ try{ return localStorage.getItem(CLOUD_DIRTY_KEY) === '1'; }catch(e){ return false; } }
+function setDirty(v){ try{ if(v) localStorage.setItem(CLOUD_DIRTY_KEY, '1'); else localStorage.removeItem(CLOUD_DIRTY_KEY); }catch(e){} }
+
+function setSyncStatus(status, msg){
+  cloud.status = status;
+  cloud.msg = msg || '';
+  const dot = document.getElementById('syncDot');
+  if(dot){
+    dot.className = 'sync-dot' + (status === 'ok' || status === 'pending' || status === 'error' ? ' ' + status : ' hidden');
+  }
+  updateAccountSection();
+}
+
+function updateAccountSection(){
+  const section = document.getElementById('accountSection');
+  if(!section) return;
+  if(!CLOUD_ENABLED){ section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+  const text = document.getElementById('accountText');
+  const btns = document.getElementById('accountButtons');
+  btns.innerHTML = '';
+  function addBtn(label, fn, danger){
+    const b = document.createElement('button');
+    b.className = 'data-action' + (danger ? ' danger' : '');
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    btns.appendChild(b);
+  }
+  let skipped = false;
+  try{ skipped = localStorage.getItem(CLOUD_SKIP_KEY) === '1'; }catch(e){}
+  if(cloud.user){
+    const label = { ok: 'All changes saved to your account.', pending: 'Saving…', error: 'Not synced yet. ' + cloud.msg, off: '' }[cloud.status] || '';
+    text.textContent = 'Signed in as ' + (cloud.user.email || 'your account') + '. ' + label;
+    addBtn('Sync now', ()=> syncNow());
+    addBtn('Sign out', ()=> signOutFlow(), true);
+  } else if(skipped){
+    text.textContent = 'Sync is off on this device, so your data stays in this browser only.';
+    addBtn('Sign in to sync', ()=>{ try{ localStorage.removeItem(CLOUD_SKIP_KEY); }catch(e){} initCloud(); });
+  } else {
+    text.textContent = cloud.msg || 'Not signed in.';
+    addBtn('Sign in', ()=> showAuth());
+  }
+}
+
+function loadSupabaseLib(){
+  return new Promise((resolve, reject)=>{
+    if(window.supabase && window.supabase.createClient){ resolve(); return; }
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    sc.onload = ()=> resolve();
+    sc.onerror = ()=> reject(new Error('Could not load the sync library'));
+    document.head.appendChild(sc);
+  });
+}
+
+function dataHasContent(d){
+  return !!d && ((d.days || []).some(day => (day.tasks || []).length > 0) || (d.trash || []).length > 0);
+}
+
+async function initCloud(){
+  if(!CLOUD_ENABLED) return;
+  let skipped = false;
+  try{ skipped = localStorage.getItem(CLOUD_SKIP_KEY) === '1'; }catch(e){}
+  if(skipped){ setSyncStatus('off'); return; }
+  try{ await loadSupabaseLib(); }
+  catch(e){ setSyncStatus('error', 'Could not reach the sync service. Your changes are kept on this device.'); return; }
+  if(!cloud.client){
+    cloud.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    cloud.client.auth.onAuthStateChange(event=>{
+      if(event === 'SIGNED_OUT'){ cloud.user = null; setSyncStatus('off'); }
+    });
+  }
+  let session = null;
+  try{ const r = await cloud.client.auth.getSession(); session = r && r.data && r.data.session; }catch(e){}
+  if(session && session.user){
+    cloud.user = session.user;
+    await syncAfterLogin();
+  } else {
+    setSyncStatus('off');
+    showAuth();
+  }
+}
+
+function showAuth(){
+  document.getElementById('authOverlay').classList.remove('hidden');
+  setAuthMsg('');
+}
+function hideAuth(){ document.getElementById('authOverlay').classList.add('hidden'); }
+function setAuthMsg(text, info){
+  const el = document.getElementById('authMsg');
+  el.textContent = text || '';
+  el.className = 'auth-msg' + (info ? ' info' : '');
+}
+
+async function handleAuth(mode){
+  if(!cloud.client){
+    try{ await loadSupabaseLib(); cloud.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
+    catch(e){ setAuthMsg('Could not reach the sync service. Check your connection.'); return; }
+  }
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if(!email || !password){ setAuthMsg('Enter your email and a password.'); return; }
+  setAuthMsg(mode === 'up' ? 'Creating account…' : 'Signing in…', true);
+  try{
+    const res = mode === 'up'
+      ? await cloud.client.auth.signUp({ email, password })
+      : await cloud.client.auth.signInWithPassword({ email, password });
+    if(res.error){ setAuthMsg(res.error.message); return; }
+    const session = res.data && res.data.session;
+    if(!session){
+      setAuthMsg('Account created. Check your email to confirm it, then tap Sign in.', true);
+      return;
+    }
+    cloud.user = session.user;
+    document.getElementById('authPassword').value = '';
+    try{ localStorage.removeItem(CLOUD_SKIP_KEY); }catch(e){}
+    await syncAfterLogin();
+  }catch(e){
+    setAuthMsg('Something went wrong: ' + (e.message || e));
+  }
+}
+
+function adoptCloudRow(row){
+  adoptData(row.data);
+  cloud.version = row.version;
+  try{ localStorage.setItem(CLOUD_VER_KEY, String(row.version)); }catch(e){}
+  setDirty(false);
+  storageSet(STORAGE_KEY, JSON.stringify(data)).catch(()=>{});
+}
+
+async function fetchRow(){
+  const r = await cloud.client.from('app_data').select('data,version').eq('user_id', cloud.user.id).maybeSingle();
+  if(r.error) throw r.error;
+  return r.data;
+}
+
+async function syncAfterLogin(){
+  hideAuth();
+  setSyncStatus('pending', 'Syncing…');
+  try{
+    const row = await fetchRow();
+    if(!row){
+      cloud.version = 0;
+      setDirty(true);
+      await pushNow();
+      return;
+    }
+    const dirty = isDirty();
+    if(cloud.version === row.version){
+      if(dirty) await pushNow(); else setSyncStatus('ok');
+      return;
+    }
+    const neverSynced = cloud.version === 0;
+    if(!dataHasContent(data) || (!dirty && !neverSynced)){
+      adoptCloudRow(row);
+      setSyncStatus('ok');
+      return;
+    }
+    await resolveConflict(row);
+  }catch(e){
+    setSyncStatus('error', e.message || 'Sync failed.');
+  }
+}
+
+async function resolveConflict(row){
+  const choice = await askChoice('Two versions found',
+    'Your account already has saved data, and this device has different data too. Which should be kept? The other one will be replaced. (Tip: tap Data → Export backup first if unsure.)',
+    [{ label: 'Use my account data', value: 'cloud', primary: true }, { label: 'Use this device’s data', value: 'local' }]);
+  if(choice === 'cloud'){
+    adoptCloudRow(row);
+    setSyncStatus('ok');
+  } else {
+    cloud.version = row.version;
+    setDirty(true);
+    await pushNow();
+  }
+}
+
+function cloudMarkDirty(){
+  if(!CLOUD_ENABLED) return;
+  setDirty(true);
+  if(!cloudActive()) return;
+  setSyncStatus('pending', 'Saving…');
+  clearTimeout(cloud.pushTimer);
+  cloud.pushTimer = setTimeout(pushNow, 1500);
+}
+
+async function pushNow(){
+  if(!cloudActive()) return;
+  clearTimeout(cloud.pushTimer);
+  if(cloud.pushing){ cloud.pushTimer = setTimeout(pushNow, 800); return; }
+  cloud.pushing = true;
+  const snapshot = JSON.stringify(data);
+  try{
+    let newVer = 0, conflict = false;
+    if(!cloud.version){
+      const r = await cloud.client.from('app_data').insert({ user_id: cloud.user.id, data: JSON.parse(snapshot), version: 1 });
+      if(r.error){ if(r.error.code === '23505') conflict = true; else throw r.error; }
+      else newVer = 1;
+    } else {
+      const r = await cloud.client.from('app_data')
+        .update({ data: JSON.parse(snapshot), version: cloud.version + 1, updated_at: new Date().toISOString() })
+        .eq('user_id', cloud.user.id).eq('version', cloud.version).select('version');
+      if(r.error) throw r.error;
+      if(!r.data || !r.data.length) conflict = true; else newVer = r.data[0].version;
+    }
+    if(conflict){
+      cloud.pushing = false;
+      const row = await fetchRow();
+      if(row) await resolveConflict(row);
+      return;
+    }
+    cloud.version = newVer;
+    try{ localStorage.setItem(CLOUD_VER_KEY, String(newVer)); }catch(e){}
+    if(JSON.stringify(data) === snapshot){ setDirty(false); setSyncStatus('ok'); }
+    else { cloud.pushTimer = setTimeout(pushNow, 300); }
+  }catch(e){
+    setSyncStatus('error', (e && e.message) ? e.message : 'Sync failed.');
+    cloud.pushTimer = setTimeout(pushNow, 15000);
+  }finally{
+    cloud.pushing = false;
+  }
+}
+
+async function syncNow(){
+  if(!cloudActive()) return;
+  setSyncStatus('pending', 'Syncing…');
+  try{
+    if(isDirty()){ await pushNow(); return; }
+    const row = await fetchRow();
+    if(row && row.version !== cloud.version){ adoptCloudRow(row); }
+    setSyncStatus('ok');
+  }catch(e){ setSyncStatus('error', e.message || 'Sync failed.'); }
+}
+
+// Pick up changes made on another device when this one comes back into view.
+async function pullIfNewer(){
+  if(!cloudActive() || cloud.pushing) return;
+  if(isDirty()){ pushNow(); return; }
+  const ae = document.activeElement;
+  if(ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
+  if(document.querySelector('#detailPanel.open')) return;
+  try{
+    const r = await cloud.client.from('app_data').select('version').eq('user_id', cloud.user.id).maybeSingle();
+    if(r.error || !r.data || r.data.version === cloud.version) return;
+    const row = await fetchRow();
+    if(row && !isDirty()){ adoptCloudRow(row); setSyncStatus('ok'); }
+  }catch(e){}
+}
+
+async function signOutFlow(){
+  if(!cloudActive()) return;
+  if(isDirty()){
+    await pushNow();
+    if(isDirty()){
+      const c = await askChoice('Some changes have not synced',
+        'Signing out now would lose changes made on this device. Try again once you are online, or sign out anyway.',
+        [{ label: 'Stay signed in', value: 'stay', primary: true }, { label: 'Sign out anyway', value: 'out' }]);
+      if(c !== 'out') return;
+    }
+  }
+  try{ await cloud.client.auth.signOut(); }catch(e){}
+  try{
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CLOUD_VER_KEY);
+    localStorage.removeItem(CLOUD_DIRTY_KEY);
+  }catch(e){}
+  location.reload();
+}
+
+// ---- wiring ----
+document.getElementById('dataBtn').addEventListener('click', ()=>{
+  setBackupMsg('');
+  updateAccountSection();
+  document.getElementById('dataPanel').classList.add('open');
+});
+document.getElementById('dataCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('dataPanel').classList.remove('open');
+});
+document.getElementById('exportBtn').addEventListener('click', exportBackup);
+document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', e=>{
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  importBackupFile(f);
+});
+document.getElementById('authSignIn').addEventListener('click', ()=> handleAuth('in'));
+document.getElementById('authSignUp').addEventListener('click', ()=> handleAuth('up'));
+document.getElementById('authPassword').addEventListener('keydown', e=>{ if(e.key === 'Enter') handleAuth('in'); });
+document.getElementById('authSkip').addEventListener('click', ()=>{
+  try{ localStorage.setItem(CLOUD_SKIP_KEY, '1'); }catch(e){}
+  hideAuth();
+  setSyncStatus('off');
+});
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') pullIfNewer();
+  else if(cloudActive() && isDirty()) pushNow();
+});
+window.addEventListener('focus', pullIfNewer);
+
+updateAccountSection();
+load().then(initCloud);
 </script>
 </body>
 </html>
