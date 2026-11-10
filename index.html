@@ -277,11 +277,7 @@
 <body>
 <div class="hero-banner">
   <svg viewBox="0 0 1200 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="0" y="0" width="1200" height="200" fill="#0A1F2B"/>
-    <circle cx="1080" cy="50" r="22" fill="#CFEFFF" opacity="0.85"/>
-    <polygon points="0,200 0,150 100,110 220,150 340,90 460,140 600,100 760,150 900,110 1040,150 1200,120 1200,200" fill="#9FDBFF" opacity="0.9"/>
-    <polygon points="0,200 0,170 150,120 300,160 420,100 560,150 700,110 850,160 1000,120 1150,155 1200,140 1200,200" fill="#5AC8FF"/>
-    <polygon points="0,200 0,190 120,140 260,180 400,130 540,175 680,135 820,180 960,140 1100,178 1200,160 1200,200" fill="#1E7FB0"/>
+    <rect x="0" y="0" width="1200" height="200" fill="#141414"/>
   </svg>
 </div>
 <div id="app">
@@ -290,21 +286,25 @@
     <button id="themesBtn">Themes</button>
   </header>
   <div id="themePicker" class="hidden">
-    <button class="theme-option" data-theme="mountains">
-      <span class="theme-swatch" style="background:#38b6ff;"></span>
-      Mountains
-    </button>
-    <button class="theme-option" data-theme="city">
-      <span class="theme-swatch" style="background:#8c52ff;"></span>
-      City View
-    </button>
-    <button class="theme-option" data-theme="forest">
-      <span class="theme-swatch" style="background:#008037;"></span>
-      Forest
-    </button>
-    <button class="theme-option" data-theme="beach">
+    <button class="theme-option" data-color="orange">
       <span class="theme-swatch" style="background:#FF751F;"></span>
-      Beach
+      Orange
+    </button>
+    <button class="theme-option" data-color="blue">
+      <span class="theme-swatch" style="background:#38b6ff;"></span>
+      Blue
+    </button>
+    <button class="theme-option" data-color="green">
+      <span class="theme-swatch" style="background:#2ECC71;"></span>
+      Green
+    </button>
+    <button class="theme-option" data-color="purple">
+      <span class="theme-swatch" style="background:#8c52ff;"></span>
+      Purple
+    </button>
+    <button class="theme-option" data-color="pink">
+      <span class="theme-swatch" style="background:#FF2D95;"></span>
+      Hot Pink
     </button>
   </div>
   <div id="days"></div>
@@ -458,174 +458,20 @@ function preventIOSZoom(el){
 let DEFAULT_SECTION_COLOR = '#38b6ff';
 let PINNED_SECTION_COLOR = '#1E7FB0';
 
-const MOUNTAIN_BANNER_SVG = `
-  <rect x="0" y="0" width="1200" height="200" fill="#0A1F2B"/>
-  <circle cx="1080" cy="50" r="22" fill="#CFEFFF" opacity="0.85"/>
-  <polygon points="0,200 0,150 100,110 220,150 340,90 460,140 600,100 760,150 900,110 1040,150 1200,120 1200,200" fill="#9FDBFF" opacity="0.9"/>
-  <polygon points="0,200 0,170 150,120 300,160 420,100 560,150 700,110 850,160 1000,120 1150,155 1200,140 1200,200" fill="#5AC8FF"/>
-  <polygon points="0,200 0,190 120,140 260,180 400,130 540,175 680,135 820,180 960,140 1100,178 1200,160 1200,200" fill="#1E7FB0"/>
-`;
-
-const CITY_BANNER_SVG = `
-  <rect x="0" y="0" width="1200" height="200" fill="#150A1C"/>
-  <circle cx="130" cy="35" r="13" fill="#E8D6F0" opacity="0.85"/>
-  <g fill="#D9BFF0" opacity="0.65">
-    <rect x="20" y="165" width="40" height="35"/>
-    <rect x="90" y="155" width="35" height="45"/>
-    <rect x="180" y="170" width="45" height="30"/>
-    <rect x="280" y="160" width="40" height="40"/>
-    <rect x="600" y="165" width="45" height="35"/>
-    <rect x="700" y="160" width="40" height="40"/>
-    <rect x="930" y="155" width="35" height="45"/>
-    <rect x="1040" y="170" width="45" height="30"/>
-    <rect x="1130" y="160" width="40" height="40"/>
-  </g>
-  <g fill="#5e17eb" opacity="0.85">
-    <rect x="50" y="135" width="55" height="65"/>
-    <rect x="150" y="145" width="35" height="55"/>
-    <rect x="220" y="145" width="50" height="55"/>
-    <rect x="650" y="140" width="55" height="60"/>
-    <rect x="850" y="125" width="50" height="75"/>
-    <rect x="995" y="150" width="40" height="50"/>
-    <rect x="1080" y="145" width="60" height="55"/>
-  </g>
-  <g fill="#8c52ff">
-    <rect x="0" y="130" width="50" height="70"/>
-    <polygon points="90,200 90,140 112,120 134,140 134,200"/>
-    <rect x="190" y="125" width="55" height="75"/>
-    <rect x="205" y="105" width="25" height="20"/>
-    <rect x="290" y="135" width="40" height="65"/>
-    <rect x="308" y="118" width="4" height="17"/>
-    <rect x="335" y="145" width="35" height="55"/>
-    <rect x="580" y="125" width="50" height="75" rx="10"/>
-    <rect x="660" y="140" width="45" height="60"/>
-    <rect x="705" y="135" width="50" height="65"/>
-    <polygon points="860,200 860,120 882,100 904,120 904,200"/>
-    <rect x="950" y="130" width="45" height="70"/>
-    <rect x="965" y="112" width="16" height="18"/>
-    <rect x="1040" y="110" width="60" height="90"/>
-    <rect x="1068" y="92" width="4" height="18"/>
-    <rect x="1130" y="130" width="50" height="70" rx="10"/>
-  </g>
-  <g fill="#8c52ff">
-    <rect x="390" y="130" width="6" height="60"/>
-    <rect x="540" y="130" width="6" height="60"/>
-    <rect x="375" y="185" width="180" height="5"/>
-  </g>
-  <g stroke="#8c52ff" stroke-width="1.5" fill="none">
-    <line x1="393" y1="132" x2="375" y2="185"/>
-    <line x1="393" y1="132" x2="465" y2="185"/>
-    <line x1="543" y1="132" x2="555" y2="185"/>
-    <line x1="543" y1="132" x2="470" y2="185"/>
-  </g>
-  <g stroke="#8c52ff" stroke-width="4" fill="none">
-    <line x1="774" y1="55" x2="774" y2="200"/>
-  </g>
-  <g fill="#8c52ff">
-    <rect x="774" y="50" width="105" height="5"/>
-    <rect x="735" y="50" width="39" height="5"/>
-    <rect x="728" y="42" width="10" height="12"/>
-  </g>
-  <g stroke="#8c52ff" stroke-width="1.5" fill="none">
-    <line x1="774" y1="35" x2="879" y2="50"/>
-    <line x1="774" y1="35" x2="735" y2="50"/>
-    <line x1="879" y1="53" x2="879" y2="90"/>
-  </g>
-  <g fill="#E8D6F0" opacity="0.9">
-    <rect x="220" y="184" width="50" height="14" rx="4"/>
-    <rect x="230" y="178" width="26" height="8" rx="2"/>
-    <circle cx="232" cy="198" r="6"/>
-    <circle cx="258" cy="198" r="6"/>
-    <rect x="470" y="188" width="30" height="10" rx="3"/>
-    <circle cx="478" cy="199" r="4"/>
-    <circle cx="493" cy="199" r="4"/>
-    <rect x="900" y="188" width="30" height="10" rx="3"/>
-    <circle cx="908" cy="199" r="4"/>
-    <circle cx="923" cy="199" r="4"/>
-    <rect x="640" y="184" width="50" height="14" rx="4"/>
-    <rect x="650" y="178" width="26" height="8" rx="2"/>
-    <circle cx="652" cy="198" r="6"/>
-    <circle cx="678" cy="198" r="6"/>
-    <rect x="1050" y="184" width="50" height="14" rx="4"/>
-    <rect x="1060" y="178" width="26" height="8" rx="2"/>
-    <circle cx="1062" cy="198" r="6"/>
-    <circle cx="1088" cy="198" r="6"/>
-  </g>
-`;
-
-const FOREST_BANNER_SVG = `
-  <rect x="0" y="0" width="1200" height="200" fill="#0A1F14"/>
-  <circle cx="1080" cy="45" r="20" fill="#DFF5E4" opacity="0.85"/>
-  <g stroke="#DFF5E4" stroke-width="2" fill="none" opacity="0.75">
-    <path d="M 300 42 q 8 -10 16 0 q 8 -10 16 0"/>
-    <path d="M 520 68 q 7 -8 14 0 q 7 -8 14 0"/>
-  </g>
-  <g fill="#8FCBA0" opacity="0.75">
-    <polygon points="10,200 26,158 42,200"/>
-    <polygon points="90,200 106,150 122,200"/>
-    <polygon points="175,200 191,160 207,200"/>
-    <polygon points="260,200 276,150 292,200"/>
-    <polygon points="345,200 361,158 377,200"/>
-    <polygon points="430,200 446,150 462,200"/>
-    <polygon points="560,200 576,158 592,200"/>
-    <polygon points="645,200 661,150 677,200"/>
-    <polygon points="730,200 746,158 762,200"/>
-    <polygon points="815,200 831,150 847,200"/>
-    <polygon points="900,200 916,158 932,200"/>
-    <polygon points="1000,200 1016,150 1032,200"/>
-    <polygon points="1085,200 1101,158 1117,200"/>
-    <polygon points="1160,200 1176,150 1192,200"/>
-  </g>
-  <g fill="#4FA868" opacity="0.95">
-    <rect x="112" y="184" width="8" height="14"/>
-    <polygon points="90,186 116,150 142,186"/>
-    <polygon points="98,158 116,128 134,158"/>
-    <polygon points="235,200 251,110 267,200"/>
-    <rect x="386" y="182" width="8" height="16"/>
-    <polygon points="362,184 390,145 418,184"/>
-    <polygon points="371,155 390,122 409,155"/>
-    <polygon points="605,200 621,105 637,200"/>
-    <rect x="756" y="184" width="8" height="14"/>
-    <polygon points="734,186 760,150 786,186"/>
-    <polygon points="742,158 760,128 778,158"/>
-    <polygon points="975,200 991,108 1007,200"/>
-    <rect x="1116" y="182" width="8" height="16"/>
-    <polygon points="1092,184 1120,145 1148,184"/>
-    <polygon points="1101,155 1120,122 1139,155"/>
-  </g>
-  <g fill="#008037">
-    <polygon points="45,200 60,55 75,200"/>
-    <rect x="170" y="182" width="10" height="18"/>
-    <polygon points="140,184 175,132 210,184"/>
-    <polygon points="151,150 175,112 199,150"/>
-    <polygon points="160,120 175,95 190,120"/>
-    <polygon points="325,200 340,60 355,200"/>
-    <rect x="470" y="180" width="10" height="20"/>
-    <polygon points="438,182 475,128 512,182"/>
-    <polygon points="449,148 475,108 501,148"/>
-    <polygon points="459,118 475,90 491,118"/>
-    <polygon points="695,200 710,50 725,200"/>
-    <rect x="855" y="182" width="10" height="18"/>
-    <polygon points="825,184 860,132 895,184"/>
-    <polygon points="836,150 860,112 884,150"/>
-    <polygon points="845,120 860,95 875,120"/>
-    <polygon points="1050,200 1065,58 1080,200"/>
-  </g>
-`;
-
-const BEACH_BANNER_SVG = `
-  <rect x="0" y="0" width="1200" height="200" fill="#2B0F00"/>
-  <circle cx="620" cy="60" r="30" fill="#FFC98A"/>
-  <g fill="#FFB47A" opacity="0.55">
+function beachBanner(c){
+  return `
+  <rect x="0" y="0" width="1200" height="200" fill="${c.bg}"/>
+  <circle cx="620" cy="60" r="30" fill="${c.sun}"/>
+  <g fill="${c.wave1}" opacity="0.55">
     <path d="M0,130 Q60,115 120,130 T240,130 T360,130 T480,130 T600,130 T720,130 T840,130 T960,130 T1080,130 T1200,130 L1200,200 L0,200 Z"/>
   </g>
-  <g fill="#FF9A47" opacity="0.8">
+  <g fill="${c.wave2}" opacity="0.8">
     <path d="M0,155 Q55,138 110,155 T220,155 T330,155 T440,155 T550,155 T660,155 T770,155 T880,155 T990,155 T1100,155 T1200,155 L1200,200 L0,200 Z"/>
   </g>
-  <g fill="#D9530F">
+  <g fill="${c.wave3}">
     <path d="M0,178 Q50,163 100,178 T200,178 T300,178 T400,178 T500,178 T600,178 T700,178 T800,178 T900,178 T1000,178 T1100,178 T1200,178 L1200,200 L0,200 Z"/>
   </g>
-  <g fill="#762F02">
+  <g fill="${c.dark}">
     <rect x="900" y="108" width="300" height="10"/>
     <rect x="920" y="118" width="8" height="72"/>
     <rect x="1000" y="118" width="8" height="72"/>
@@ -633,25 +479,34 @@ const BEACH_BANNER_SVG = `
     <rect x="1160" y="118" width="8" height="72"/>
   </g>
   <g>
-    <path d="M140,200 Q133,150 146,103 Q150,93 154,103 Q167,150 160,200 Z" fill="#FF751F"/>
-    <rect x="148" y="115" width="4" height="70" fill="#762F02"/>
+    <path d="M140,200 Q133,150 146,103 Q150,93 154,103 Q167,150 160,200 Z" fill="${c.accent}"/>
+    <rect x="148" y="115" width="4" height="70" fill="${c.dark}"/>
   </g>
 `;
+}
 
-const THEMES = {
-  mountains: { accent: '#38b6ff', defaultSectionColor: '#38b6ff', pinnedColor: '#1E7FB0', banner: MOUNTAIN_BANNER_SVG },
-  city: { accent: '#8c52ff', defaultSectionColor: '#8c52ff', pinnedColor: '#8c52ff', banner: CITY_BANNER_SVG },
-  forest: { accent: '#2ECC71', defaultSectionColor: '#2ECC71', pinnedColor: '#008037', banner: FOREST_BANNER_SVG },
-  beach: { accent: '#FF751F', defaultSectionColor: '#FF751F', pinnedColor: '#762F02', banner: BEACH_BANNER_SVG }
+// The Beach scene is the only banner; these are the colorways it can wear.
+const BEACH_COLORS = {
+  orange: { label: 'Orange',   accent: '#FF751F', pinned: '#762F02', bg: '#2B0F00', sun: '#FFC98A', wave1: '#FFB47A', wave2: '#FF9A47', wave3: '#D9530F', dark: '#762F02' },
+  blue:   { label: 'Blue',     accent: '#38b6ff', pinned: '#1E7FB0', bg: '#04182B', sun: '#BFE6FF', wave1: '#8FD0FF', wave2: '#4DB8FF', wave3: '#1E7FB0', dark: '#0B3A5C' },
+  green:  { label: 'Green',    accent: '#2ECC71', pinned: '#1E9E55', bg: '#04210F', sun: '#C8F5D8', wave1: '#8EE6B1', wave2: '#4FD98A', wave3: '#1E9E55', dark: '#0A4A26' },
+  purple: { label: 'Purple',   accent: '#8c52ff', pinned: '#5E17EB', bg: '#1A0A33', sun: '#DCC8FF', wave1: '#B796FF', wave2: '#9E70FF', wave3: '#5E17EB', dark: '#2E1266' },
+  pink:   { label: 'Hot Pink', accent: '#FF2D95', pinned: '#C4166B', bg: '#2B0517', sun: '#FFC2E0', wave1: '#FF8FC4', wave2: '#FF4FA8', wave3: '#C4166B', dark: '#6B0A3A' }
 };
+// Older saves stored one of four scene themes; map each to the closest color so the accent doesn't jump.
+const LEGACY_THEME_COLORS = { mountains: 'blue', city: 'purple', forest: 'green', beach: 'orange' };
+function currentBeachColor(){
+  if(data.beachColor && BEACH_COLORS[data.beachColor]) return data.beachColor;
+  return LEGACY_THEME_COLORS[data.theme] || 'orange';
+}
 
-function applyTheme(themeName){
-  const theme = THEMES[themeName] || THEMES.mountains;
-  document.documentElement.style.setProperty('--accent', theme.accent);
-  DEFAULT_SECTION_COLOR = theme.defaultSectionColor;
-  PINNED_SECTION_COLOR = theme.pinnedColor;
+function applyTheme(colorKey){
+  const c = BEACH_COLORS[colorKey] || BEACH_COLORS.orange;
+  document.documentElement.style.setProperty('--accent', c.accent);
+  DEFAULT_SECTION_COLOR = c.accent;
+  PINNED_SECTION_COLOR = c.pinned;
   const bannerEl = document.querySelector('.hero-banner svg');
-  if(bannerEl) bannerEl.innerHTML = theme.banner;
+  if(bannerEl) bannerEl.innerHTML = beachBanner(c);
 }
 const PALETTE = ['#38b6ff', '#2bf645', '#ff38D3', '#f8fd11', '#ff8d08'];
 function getDayColor(day){
@@ -684,7 +539,7 @@ async function load(){
     if(key === 'NEW' || key === 'BASECAMP') d.label = 'TASKS';
   });
   ensureTasksSection();
-  applyTheme(data.theme || 'mountains');
+  applyTheme(currentBeachColor());
   document.getElementById('appTitle').textContent = data.appTitle || todaysDateTitle();
   render();
   renderTrash();
@@ -1929,13 +1784,13 @@ document.getElementById('resetAppBtn').addEventListener('click', ()=>{
 document.getElementById('themesBtn').addEventListener('click', ()=>{
   document.getElementById('themePicker').classList.toggle('hidden');
   document.querySelectorAll('.theme-option').forEach(btn=>{
-    btn.classList.toggle('selected', btn.dataset.theme === (data.theme || 'mountains'));
+    btn.classList.toggle('selected', btn.dataset.color === currentBeachColor());
   });
 });
 document.querySelectorAll('.theme-option').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    data.theme = btn.dataset.theme;
-    applyTheme(data.theme);
+    data.beachColor = btn.dataset.color;
+    applyTheme(data.beachColor);
     save();
     render();
     document.getElementById('themePicker').classList.add('hidden');
