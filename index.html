@@ -236,7 +236,7 @@
     padding:0 20px;z-index:20;
   }
   .bottom-bar-left{display:flex;align-items:center;gap:14px;}
-  #trashBtn, #completedBtn, #eyeBtn, #resetAppBtn{
+  #trashBtn, #completedBtn, #eyeBtn{
     background:none;border:none;color:var(--text-dim);padding:8px;
     position:relative;line-height:1;display:flex;align-items:center;justify-content:center;
   }
@@ -367,12 +367,6 @@
 
 <div id="bottomBar">
   <div class="bottom-bar-left">
-    <button id="resetAppBtn" title="Reset app">
-      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 12a9 9 0 1 1-3-6.7"/>
-        <polyline points="21 3 21 9 15 9"/>
-      </svg>
-    </button>
     <button id="trashBtn" title="Deleted tasks">
       <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 7h16"/>
@@ -437,6 +431,11 @@
       </div>
       <input type="file" id="importFile" accept=".json,application/json" class="hidden">
       <div class="data-note" id="backupMsg" style="margin:10px 0 0;"></div>
+    </div>
+    <div class="data-section">
+      <div class="data-title">Reset app</div>
+      <div class="data-note">Permanently deletes every task, section and setting and starts fresh. If you are signed in, this also clears your synced account data, so the other device will be reset too. Export a backup first if there is any doubt.</div>
+      <div class="data-row"><button class="data-action danger" id="resetAppBtn">Reset app…</button></div>
     </div>
     <div class="data-section hidden" id="accountSection">
       <div class="data-title">Account &amp; sync</div>
@@ -525,8 +524,8 @@
 // ---- Cloud sync setup (Supabase) ----
 // Paste your own Project URL and anon/public key between the quotes to turn on login + sync.
 // Leave them as-is and the app simply keeps data in this browser.
-const SUPABASE_URL_RAW = 'https://gzbeocnfhmnqyufzzvbn.supabase.co';
-const SUPABASE_ANON_KEY_RAW = 'sb_publishable_QCwggUS2dt2o-o2NUwW-nA_bwxCP33H';
+const SUPABASE_URL_RAW = 'PASTE_YOUR_PROJECT_URL_HERE';
+const SUPABASE_ANON_KEY_RAW = 'PASTE_YOUR_ANON_KEY_HERE';
 // Tidy common paste mistakes: extra spaces, or a URL with a path on the end (e.g. /rest/v1/ or /dashboard/...).
 const SUPABASE_ANON_KEY = SUPABASE_ANON_KEY_RAW.trim();
 const SUPABASE_URL = (()=>{ try{ return new URL(SUPABASE_URL_RAW.trim()).origin; }catch(e){ return SUPABASE_URL_RAW.trim(); } })();
@@ -2052,9 +2051,14 @@ function rebuildFromDOM(){
   render();
 }
 
-document.getElementById('resetAppBtn').addEventListener('click', ()=>{
-  const ok = confirm('Reset this app? This permanently deletes every task, section, and setting on this device and starts fresh, like a brand-new install. This cannot be undone.');
-  if(!ok) return;
+document.getElementById('resetAppBtn').addEventListener('click', async ()=>{
+  const first = await askChoice('Reset the app?',
+    'This permanently deletes every task, section, and setting' + (cloudActive() ? ', on this device and in your synced account' : ' on this device') + ', and starts fresh. This cannot be undone.',
+    [{ label: 'Cancel', value: 'no', primary: true }, { label: 'Continue to reset', value: 'yes' }]);
+  if(first !== 'yes') return;
+  const second = await askChoice('Are you absolutely sure?', 'Everything will be erased. Last chance to back out.',
+    [{ label: 'No, keep my data', value: 'no', primary: true }, { label: 'Yes, erase everything', value: 'yes' }]);
+  if(second !== 'yes') return;
   recentlyAddedDayIds.clear();
   data = defaultData();
   save();
@@ -2062,6 +2066,7 @@ document.getElementById('resetAppBtn').addEventListener('click', ()=>{
   render();
   renderTrash();
   renderCompleted();
+  document.getElementById('dataPanel').classList.remove('open');
 });
 
 document.getElementById('themesBtn').addEventListener('click', ()=>{
@@ -2440,17 +2445,16 @@ async function syncAfterLogin(){
 }
 
 async function resolveConflict(row){
-  const choice = await askChoice('Two versions found',
-    'Your account already has saved data, and this device has different data too. Which should be kept? The other one will be replaced. (Tip: tap Data → Export backup first if unsure.)',
-    [{ label: 'Use my account data', value: 'cloud', primary: true }, { label: 'Use this device’s data', value: 'local' }]);
-  if(choice === 'cloud'){
+  // The phone is the primary copy. If the two versions differ, a computer takes the phone's data;
+  // the phone keeps its own data and replaces what is in the account.
+  if(isDesktop()){
     adoptCloudRow(row);
     setSyncStatus('ok');
-  } else {
-    cloud.version = row.version;
-    setDirty(true);
-    await pushNow();
+    return;
   }
+  cloud.version = row.version;
+  setDirty(true);
+  await pushNow();
 }
 
 function cloudMarkDirty(){
