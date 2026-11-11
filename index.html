@@ -195,7 +195,15 @@
 
   .drag-handle{color:var(--text-dim);font-size:22px;padding:2px 8px;flex-shrink:0;touch-action:none;line-height:1;}
   .icon-btn{background:none;border:none;color:var(--accent);font-size:22px;padding:1px 8px;flex-shrink:0;line-height:1;}
-  .add-sub-btn{margin-right:22px;}
+  .add-sub-btn{margin-right:0;}
+  .rock-radio-hit{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:30px;height:28px;background:none;border:none;padding:0;touch-action:manipulation;}
+  .rock-radio{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--text-dim);box-sizing:border-box;}
+  .rock-radio-hit.on .rock-radio{background:#FFE600;border-color:#FFE600;box-shadow:0 0 0 2px rgba(255,230,0,0.25);}
+  .rocks-card .basecamp-title{color:#FFE600;}
+  .rocks-card .header-underline{background:#FFE600;}
+  .rocks-card .task .task-row .task-text{color:#FFE600 !important;}
+  .rocks-card .task .task-row .checkbox{border-color:#FFE600;}
+  .rocks-card .task.has-subtasks > .row-wrap > .task-row .task-text{font-weight:700;}
 
   .add-task-row{padding:6px 16px 4px;}
   .add-task-row button{background:none;border:none;color:var(--accent);font-size:20px;font-weight:600;padding:4px 0;}
@@ -338,6 +346,7 @@
       Hot Pink
     </button>
   </div>
+  <div id="rocksDays"></div>
   <div id="days"></div>
   <div id="pinnedDays"></div>
 </div>
@@ -502,8 +511,11 @@
 // ---- Cloud sync setup (Supabase) ----
 // Paste your own Project URL and anon/public key between the quotes to turn on login + sync.
 // Leave them as-is and the app simply keeps data in this browser.
-const SUPABASE_URL = 'https://gzbeocnfhmnqyufzzvbn.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_QCwggUS2dt2o-o2NUwW-nA_bwxCP33H';
+const SUPABASE_URL_RAW = 'PASTE_YOUR_PROJECT_URL_HERE';
+const SUPABASE_ANON_KEY_RAW = 'PASTE_YOUR_ANON_KEY_HERE';
+// Tidy common paste mistakes: extra spaces, or a URL with a path on the end (e.g. /rest/v1/ or /dashboard/...).
+const SUPABASE_ANON_KEY = SUPABASE_ANON_KEY_RAW.trim();
+const SUPABASE_URL = (()=>{ try{ return new URL(SUPABASE_URL_RAW.trim()).origin; }catch(e){ return SUPABASE_URL_RAW.trim(); } })();
 
 const STORAGE_KEY = 'tasks-data-cards-v1';
 const hasClaudeStorage = (typeof window.storage !== 'undefined') && window.storage && typeof window.storage.get === 'function';
@@ -633,6 +645,7 @@ function adoptData(obj){
     if(key === 'NEW' || key === 'BASECAMP') d.label = 'TASKS';
   });
   ensureTasksSection();
+  ensureRocksSection();
   applyTheme(currentBeachColor());
   document.getElementById('appTitle').textContent = data.appTitle || todaysDateTitle();
   render();
@@ -710,6 +723,7 @@ function convertToSubtaskOfPrevious(taskId, parentId){
     const parent = day.tasks.find(t => t.id === parentId);
     if(!parent){ render(); return; }
     const [task] = day.tasks.splice(idx, 1);
+    delete task.rock; delete task.rockOrigin;
     parent.subtasks = parent.subtasks || [];
     const ownSubtasks = task.subtasks || [];
     task.subtasks = [];
@@ -1240,11 +1254,13 @@ function render(){
   container.innerHTML = '';
   const pinnedContainer = document.getElementById('pinnedDays');
   pinnedContainer.innerHTML = '';
+  const rocksContainer = document.getElementById('rocksDays');
+  rocksContainer.innerHTML = '';
 
   const todayIdxNow = new Date().getDay();
   const visibleDays = data.days.filter(day => {
     const key = (day.label || '').trim().toUpperCase();
-    if(key === 'DATES' || key === 'LISTS' || key === 'TASKS') return true;
+    if(key === 'DATES' || key === 'LISTS' || key === 'TASKS' || key === 'ROCKS') return true;
     if(WEEKDAYS.includes(key)){
       const rank = weekdayRank(key, todayIdxNow);
       return rank <= 2 || data.showEmptyDays;
@@ -1264,6 +1280,7 @@ function render(){
     const isDatesSection = sectionLabel === 'DATES';
     const isListsSection = sectionLabel === 'LISTS';
     const isWeekday = WEEKDAYS.includes(sectionLabel);
+    const isRocksSection = sectionLabel === 'ROCKS';
     const weekdayTodayRank = isWeekday ? weekdayRank(sectionLabel, todayIdxNow) : null;
     const isTodaySection = weekdayTodayRank === 0;
     const isCollapsedCard = isWeekday && !day.cardExpanded;
@@ -1272,6 +1289,7 @@ function render(){
     if(isOldBarStyle) dayEl.classList.add('weekday-card', 'pinned-card');
     if(isDatesSection) dayEl.classList.add('dates-card');
     if(isListsSection) dayEl.classList.add('lists-card');
+    if(isRocksSection) dayEl.classList.add('weekday-card', 'rocks-card');
     if(isCollapsedCard) dayEl.classList.add('card-collapsed');
 
     const header = document.createElement('div');
@@ -1286,7 +1304,7 @@ function render(){
     const label = document.createElement('span');
     label.className = 'basecamp-title';
     label.textContent = isTodaySection ? 'TODAY' : day.label;
-    label.contentEditable = !isCollapsedCard;
+    label.contentEditable = !isCollapsedCard && !isRocksSection;
     label.addEventListener('blur', ()=>{
       const newText = label.textContent.trim();
       if(isTodaySection && newText === 'TODAY') return;
@@ -1386,7 +1404,9 @@ function render(){
       initSortable(ul);
     }
 
-    if(isOldBarStyle){
+    if(isRocksSection){
+      rocksContainer.appendChild(dayEl);
+    } else if(isOldBarStyle){
       pinnedContainer.appendChild(dayEl);
     } else {
       container.appendChild(dayEl);
@@ -1529,6 +1549,7 @@ function renderTask(task, draggable, sectionColor, isDatesSection, isListsSectio
     addSub.title = 'Add subtask';
     addSub.addEventListener('click', e=>{ e.stopPropagation(); startInlineAdd(subUl, task.id, null); });
     row.appendChild(addSub);
+    row.appendChild(makeRockRadio(task));
   }
 
   const handle = document.createElement('span');
@@ -1553,6 +1574,18 @@ function renderTask(task, draggable, sectionColor, isDatesSection, isListsSectio
   if(draggable) initSortable(subUl);
 
   return li;
+}
+
+function makeRockRadio(item){
+  const btn = document.createElement('button');
+  btn.className = 'rock-radio-hit' + (item.rock ? ' on' : '');
+  btn.title = item.rock ? 'Remove from Rocks' : 'Make this a Rock';
+  btn.setAttribute('aria-pressed', item.rock ? 'true' : 'false');
+  const dot = document.createElement('span');
+  dot.className = 'rock-radio';
+  btn.appendChild(dot);
+  btn.addEventListener('click', e=>{ e.stopPropagation(); toggleRock(item.id); });
+  return btn;
 }
 
 function renderSubtask(sub, sectionColor){
@@ -1602,6 +1635,8 @@ function renderSubtask(sub, sectionColor){
     row.appendChild(dot);
   }
 
+  row.appendChild(makeRockRadio(sub));
+
   const handle = document.createElement('span');
   handle.className = 'drag-handle';
   handle.textContent = '≡';
@@ -1635,6 +1670,7 @@ function attachSwipeToDelete(rowWrap, row, deleteBg, onDelete, options){
     if(e.target.closest('.drag-handle')) return;
     if(e.target.closest('.checkbox-hit')) return;
     if(e.target.closest('.icon-btn')) return;
+    if(e.target.closest('.rock-radio-hit')) return;
     if(e.target.closest('.note-icon')) return;
     if(e.target.closest('.date-badge-wrap')) return;
     if(e.target.closest('.task-collapse-hit')) return;
@@ -1839,8 +1875,15 @@ function rebuildFromDOM(){
         id: taskId, text, done, subtasks: subtasks.concat(oldCompletedSubs),
         collapsed: !!(oldTask && oldTask.collapsed), date: oldTask ? oldTask.date : undefined,
         recurring: !!(oldTask && oldTask.recurring), priority: !!(oldTask && oldTask.priority),
-        notes: oldTask ? oldTask.notes : undefined, checklist: oldTask ? oldTask.checklist : undefined
+        notes: oldTask ? oldTask.notes : undefined, checklist: oldTask ? oldTask.checklist : undefined,
+        rock: (oldTask && oldTask.rock) ? true : undefined, rockOrigin: oldTask ? oldTask.rockOrigin : undefined
       });
+    });
+    // Anything dropped into ROCKS becomes a rock; anything dragged out stops being one.
+    const isRocksList = (label || '').trim().toUpperCase() === 'ROCKS';
+    tasks.forEach(t=>{
+      if(isRocksList){ if(!t.rock){ t.rock = true; t.rockOrigin = null; } }
+      else { delete t.rock; delete t.rockOrigin; }
     });
     // The completed section isn't part of the sortable DOM tree; keep those tasks as they were.
     const completedTasks = oldDay ? oldDay.tasks.filter(t => t.done) : [];
@@ -1901,6 +1944,65 @@ function ensureTasksSection(){
     else { data.days.push(section); }
   }
   return section;
+}
+
+function isRocksDay(day){ return !!day && (day.label || '').trim().toUpperCase() === 'ROCKS'; }
+
+function ensureRocksSection(){
+  let section = data.days.find(isRocksDay);
+  if(!section){
+    section = { id: uid(), label: 'ROCKS', tasks: [], cardExpanded: true };
+    data.days.unshift(section);
+  }
+  return section;
+}
+
+// Tap a task's radio button: move it (or a subtask) into the ROCKS card, remembering
+// where it came from. Tap again: send it back to exactly that spot.
+function toggleRock(id){
+  const rocks = ensureRocksSection();
+  const clamp = (i, len)=> Math.max(0, Math.min(typeof i === 'number' ? i : len, len));
+  for(const day of data.days){
+    const idx = day.tasks.findIndex(t => t.id === id);
+    if(idx > -1){
+      const task = day.tasks[idx];
+      if(day === rocks){
+        day.tasks.splice(idx, 1);
+        const o = task.rockOrigin;
+        delete task.rock; delete task.rockOrigin;
+        const parent = (o && o.parentId) ? findTaskById(o.parentId) : null;
+        const target = (o && data.days.find(d => d.id === o.dayId && d !== rocks)) || ensureTasksSection();
+        if(parent && parent !== task){
+          parent.subtasks = parent.subtasks || [];
+          const own = task.subtasks || [];
+          task.subtasks = [];
+          parent.subtasks.splice(clamp(o.index, parent.subtasks.length), 0, task, ...own);
+          parent.collapsed = false;
+        } else {
+          target.tasks.splice(clamp(o && o.index, target.tasks.length), 0, task);
+        }
+      } else {
+        day.tasks.splice(idx, 1);
+        task.rock = true;
+        task.rockOrigin = { dayId: day.id, parentId: null, index: idx };
+        rocks.tasks.push(task);
+        rocks.cardExpanded = true;
+      }
+      save(); render(); return;
+    }
+    for(const parent of day.tasks){
+      const sIdx = (parent.subtasks || []).findIndex(s => s.id === id);
+      if(sIdx > -1){
+        const [sub] = parent.subtasks.splice(sIdx, 1);
+        sub.rock = true;
+        sub.rockOrigin = { dayId: day.id, parentId: parent.id, index: sIdx };
+        sub.subtasks = sub.subtasks || [];
+        rocks.tasks.push(sub);
+        rocks.cardExpanded = true;
+        save(); render(); return;
+      }
+    }
+  }
 }
 
 document.getElementById('fabAdd').addEventListener('click', ()=>{
