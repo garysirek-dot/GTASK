@@ -598,6 +598,28 @@ function beachBanner(c){
 `;
 }
 
+// Wide-screen version of the same beach scene: drawn at true size (no stretching) with the
+// moon and surfboard on the left, no pier, and the waves simply running on to the right.
+const DESKTOP_BANNER_W = 4000, DESKTOP_BANNER_H = 76;
+function beachBannerDesktop(c){
+  function waves(y, amp, period){
+    let d = 'M0,' + y + ' Q' + (period/4) + ',' + (y - amp) + ' ' + (period/2) + ',' + y;
+    for(let x = period; x <= DESKTOP_BANNER_W + period; x += period/2) d += ' T' + x + ',' + y;
+    return d + ' L' + (DESKTOP_BANNER_W + period) + ',' + DESKTOP_BANNER_H + ' L0,' + DESKTOP_BANNER_H + ' Z';
+  }
+  return `
+  <rect x="0" y="0" width="${DESKTOP_BANNER_W}" height="${DESKTOP_BANNER_H}" fill="${c.bg}"/>
+  <circle cx="190" cy="22" r="11" fill="${c.sun}"/>
+  <path d="${waves(44, 6, 90)}" fill="${c.wave1}" opacity="0.55"/>
+  <path d="${waves(55, 6, 84)}" fill="${c.wave2}" opacity="0.8"/>
+  <path d="${waves(66, 5, 78)}" fill="${c.wave3}"/>
+  <g>
+    <path d="M70,76 Q63,50 72,14 Q76,6 80,14 Q89,50 82,76 Z" fill="${c.accent}"/>
+    <rect x="74" y="20" width="4" height="52" fill="${c.dark}"/>
+  </g>
+`;
+}
+
 // The Beach scene is the only banner; these are the colorways it can wear.
 const BEACH_COLORS = {
   orange: { label: 'Orange',   accent: '#FF751F', pinned: '#762F02', bg: '#2B0F00', sun: '#FFC98A', wave1: '#FFB47A', wave2: '#FF9A47', wave3: '#D9530F', dark: '#762F02' },
@@ -619,7 +641,17 @@ function applyTheme(colorKey){
   DEFAULT_SECTION_COLOR = c.accent;
   PINNED_SECTION_COLOR = c.pinned;
   const bannerEl = document.querySelector('.hero-banner svg');
-  if(bannerEl) bannerEl.innerHTML = beachBanner(c);
+  if(bannerEl){
+    if(typeof isDesktop === 'function' && isDesktop()){
+      bannerEl.setAttribute('viewBox', '0 0 ' + DESKTOP_BANNER_W + ' ' + DESKTOP_BANNER_H);
+      bannerEl.setAttribute('preserveAspectRatio', 'xMinYMin slice');
+      bannerEl.innerHTML = beachBannerDesktop(c);
+    } else {
+      bannerEl.setAttribute('viewBox', '0 0 1200 200');
+      bannerEl.setAttribute('preserveAspectRatio', 'none');
+      bannerEl.innerHTML = beachBanner(c);
+    }
+  }
 }
 const PALETTE = ['#38b6ff', '#2bf645', '#ff38D3', '#f8fd11', '#ff8d08'];
 function getDayColor(day){
@@ -1265,7 +1297,7 @@ function reorderWeekdaySections(){
 const desktopMQ = (window.matchMedia && window.matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)')) || null;
 function isDesktop(){ return !!(desktopMQ && desktopMQ.matches); }
 if(desktopMQ){
-  const onChange = ()=>{ if(typeof data !== 'undefined' && data) render(); };
+  const onChange = ()=>{ if(typeof data !== 'undefined' && data){ applyTheme(currentBeachColor()); render(); } };
   if(desktopMQ.addEventListener) desktopMQ.addEventListener('change', onChange);
   else if(desktopMQ.addListener) desktopMQ.addListener(onChange);
 }
