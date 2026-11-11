@@ -71,6 +71,19 @@
 
   .hidden{display:none !important;}
 
+  /* ---- Desktop board (wide screens with a mouse). Phones/tablets never see this. ---- */
+  #board{display:none;}
+  body.desktop-mode #board{display:flex;align-items:flex-start;gap:16px;padding:16px 24px 40px;}
+  body.desktop-mode #rocksDays, body.desktop-mode #days, body.desktop-mode #pinnedDays{display:none;}
+  .board-col{flex:0 0 calc(20% - 8px);min-width:250px;min-height:60vh;border-radius:10px;padding:2px 0;transition:background 0.12s ease;}
+  body.card-dragging .board-col{background:rgba(255,255,255,0.03);outline:1px dashed #2c2c2c;}
+  .board-col .day.weekday-card{margin:0 0 14px;}
+  .board-col .sortable-ghost{opacity:0.35;}
+  .card-grip{display:none;color:var(--text-dim);font-size:15px;letter-spacing:-1px;padding:2px 8px;cursor:grab;user-select:none;line-height:1;}
+  body.desktop-mode .card-grip{display:inline-block;}
+  .card-grip:active{cursor:grabbing;}
+  body.desktop-mode .day.weekday-card.card-collapsed .card-summary{padding-bottom:12px;}
+
   .day{border-bottom:22px solid var(--bg);border-left:6px solid transparent;background:var(--bg);}
   .day.weekday-card{
     background:#202020;border-radius:8px;border-bottom:none;border-left:none;
@@ -346,6 +359,7 @@
       Hot Pink
     </button>
   </div>
+  <div id="board"></div>
   <div id="rocksDays"></div>
   <div id="days"></div>
   <div id="pinnedDays"></div>
@@ -986,7 +1000,7 @@ function renderSearchResults(){
       // Current task/subtask: tapping the result jumps to it in the app.
       item.addEventListener('click', ()=>{
         if(entry.day){
-          entry.day.cardExpanded = true;
+          setCardOpen(entry.day, true);
           const parentTask = entry.parentText ? entry.day.tasks.find(t => t.text === entry.parentText) : null;
           if(parentTask) parentTask.collapsed = false;
         }
@@ -1247,6 +1261,85 @@ function reorderWeekdaySections(){
   weekdaySlots.forEach((slotIdx, k)=>{ data.days[slotIdx] = dayObjs[k]; });
 }
 
+// ---- Desktop board helpers ----
+const desktopMQ = (window.matchMedia && window.matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)')) || null;
+function isDesktop(){ return !!(desktopMQ && desktopMQ.matches); }
+if(desktopMQ){
+  const onChange = ()=>{ if(typeof data !== 'undefined' && data) render(); };
+  if(desktopMQ.addEventListener) desktopMQ.addEventListener('change', onChange);
+  else if(desktopMQ.addListener) desktopMQ.addListener(onChange);
+}
+function desktopState(){
+  if(!data.desktop || typeof data.desktop !== 'object') data.desktop = {};
+  if(!Array.isArray(data.desktop.columns)) data.desktop.columns = [[], [], [], []];
+  if(!data.desktop.expanded || typeof data.desktop.expanded !== 'object') data.desktop.expanded = {};
+  return data.desktop;
+}
+// Desktop remembers open/closed per card on its own, so the phone's layout is never touched.
+function isCardOpen(day, isWeekday){
+  if(isDesktop()) return !!desktopState().expanded[day.id];
+  return isWeekday ? !!day.cardExpanded : true;
+}
+function setCardOpen(day, open){
+  if(isDesktop()) desktopState().expanded[day.id] = !!open;
+  else day.cardExpanded = !!open;
+}
+// Which column each visible card lives in (new cards go into the shortest column; Rocks goes on top of column 1).
+function layoutColumns(visibleDays){
+  const st = desktopState();
+  const ids = new Set(visibleDays.map(d => d.id));
+  const cols = st.columns.map(col => col.filter(id => ids.has(id)));
+  const placed = new Set(cols.flat());
+  const fresh = visibleDays.filter(d => !placed.has(d.id));
+  const firstTime = placed.size === 0;
+  let spread = 0;
+  fresh.forEach((d)=>{
+    if(isRocksDay(d)){ cols[0].unshift(d.id); return; }
+    const k = (d.label || '').trim().toUpperCase();
+    let target = 0;
+    if(firstTime){
+      // First open: days fan out over the first columns; TASKS / DATES / LISTS stack in the last one.
+      target = (k === 'TASKS' || k === 'DATES' || k === 'LISTS') ? cols.length - 1 : (spread++ % Math.max(1, cols.length - 1));
+    }
+    else { cols.forEach((c, k)=>{ if(c.length < cols[target].length) target = k; }); }
+    cols[target].push(d.id);
+  });
+  st.columns = cols;
+  return cols;
+}
+function saveBoardLayout(){
+  const st = desktopState();
+  st.columns = Array.from(document.querySelectorAll('#board > .board-col')).map(col =>
+    Array.from(col.querySelectorAll(':scope > .day')).map(el => el.dataset.dayId));
+  save();
+}
+let boardSortables = [];
+function buildBoard(dayEls, visibleDays){
+  const board = document.getElementById('board');
+  boardSortables.forEach(s => { try{ s.destroy(); }catch(e){} });
+  boardSortables = [];
+  board.innerHTML = '';
+  const cols = layoutColumns(visibleDays);
+  const byId = {};
+  dayEls.forEach(el => { byId[el.dataset.dayId] = el; });
+  cols.forEach(ids=>{
+    const colEl = document.createElement('div');
+    colEl.className = 'board-col';
+    ids.forEach(id => { if(byId[id]) colEl.appendChild(byId[id]); });
+    board.appendChild(colEl);
+    boardSortables.push(new Sortable(colEl, {
+      group: 'board-cards',
+      animation: 150,
+      handle: '.card-grip',
+      draggable: '.day',
+      fallbackOnBody: true,
+      ghostClass: 'sortable-ghost',
+      onStart: ()=>{ document.body.classList.add('card-dragging'); },
+      onEnd: ()=>{ document.body.classList.remove('card-dragging'); saveBoardLayout(); }
+    }));
+  });
+}
+
 function render(){
   if(checkDailyReset()) save();
   reorderWeekdaySections();
@@ -1257,18 +1350,22 @@ function render(){
   const rocksContainer = document.getElementById('rocksDays');
   rocksContainer.innerHTML = '';
 
+  const desktop = isDesktop();
+  document.body.classList.toggle('desktop-mode', desktop);
   const todayIdxNow = new Date().getDay();
   const visibleDays = data.days.filter(day => {
     const key = (day.label || '').trim().toUpperCase();
-    if(key === 'DATES' || key === 'LISTS' || key === 'TASKS' || key === 'ROCKS') return true;
+    if(key === 'ROCKS') return (day.tasks || []).some(t => !t.done || (t.subtasks && t.subtasks.length > 0));
+    if(key === 'DATES' || key === 'LISTS' || key === 'TASKS') return true;
     if(WEEKDAYS.includes(key)){
       const rank = weekdayRank(key, todayIdxNow);
-      return rank <= 2 || data.showEmptyDays;
+      return desktop || rank <= 2 || data.showEmptyDays;
     }
     return (day.tasks && day.tasks.some(t => !t.done || (t.subtasks && t.subtasks.length > 0))) ||
       recentlyAddedDayIds.has(day.id) || data.showEmptyDays;
   });
-  const hiddenCount = data.days.length - visibleDays.length;
+  const hiddenCount = data.days.filter(d => !visibleDays.includes(d) && !isRocksDay(d)).length;
+  const builtDayEls = [];
 
   visibleDays.forEach(day=>{
     const dayEl = document.createElement('div');
@@ -1283,7 +1380,7 @@ function render(){
     const isRocksSection = sectionLabel === 'ROCKS';
     const weekdayTodayRank = isWeekday ? weekdayRank(sectionLabel, todayIdxNow) : null;
     const isTodaySection = weekdayTodayRank === 0;
-    const isCollapsedCard = isWeekday && !day.cardExpanded;
+    const isCollapsedCard = (desktop || isWeekday) && !isCardOpen(day, isWeekday);
     dayEl.style.borderLeftColor = 'transparent';
     if(isWeekday) dayEl.classList.add('weekday-card');
     if(isOldBarStyle) dayEl.classList.add('weekday-card', 'pinned-card');
@@ -1341,20 +1438,30 @@ function render(){
       addBtn.title = isDatesSection ? 'Add a date' : 'Add a list';
       addBtn.addEventListener('click', e=>{
         e.stopPropagation();
-        const ul = dayEl.querySelector(':scope > .task-list');
+        if(isCollapsedCard){ setCardOpen(day, true); save(); render(); }
+        const ul = document.querySelector('.day[data-day-id="' + day.id + '"] > .task-list');
         if(ul) startInlineAdd(ul, null, day.id);
       });
       right.appendChild(addBtn);
     }
 
-    if(isWeekday){
+    if(desktop){
+      const grip = document.createElement('span');
+      grip.className = 'card-grip';
+      grip.textContent = '⋮⋮';
+      grip.title = 'Drag to move this card';
+      grip.addEventListener('click', e=> e.stopPropagation());
+      right.appendChild(grip);
+    }
+
+    if(isWeekday || desktop){
       const cardToggle = document.createElement('button');
       cardToggle.className = 'card-toggle-arrow' + (isCollapsedCard ? ' is-collapsed' : '');
       cardToggle.textContent = '▼';
       cardToggle.title = 'Expand/collapse this day';
       cardToggle.addEventListener('click', e=>{
         e.stopPropagation();
-        day.cardExpanded = !day.cardExpanded;
+        setCardOpen(day, !isCardOpen(day, isWeekday));
         save(); render();
       });
       right.appendChild(cardToggle);
@@ -1385,8 +1492,8 @@ function render(){
       initSortable(ul);
 
       dayEl.addEventListener('click', e=>{
-        if(e.target.closest('.card-toggle-arrow')) return;
-        day.cardExpanded = true;
+        if(e.target.closest('.card-toggle-arrow') || e.target.closest('.card-grip') || e.target.closest('.card-add-btn')) return;
+        setCardOpen(day, true);
         save(); render();
       });
     } else {
@@ -1404,6 +1511,7 @@ function render(){
       initSortable(ul);
     }
 
+    builtDayEls.push(dayEl);
     if(isRocksSection){
       rocksContainer.appendChild(dayEl);
     } else if(isOldBarStyle){
@@ -1412,6 +1520,8 @@ function render(){
       container.appendChild(dayEl);
     }
   });
+
+  if(desktop) buildBoard(builtDayEls, visibleDays);
 
   updateEyeButton(hiddenCount);
 
@@ -1827,7 +1937,7 @@ function initSortable(ul){
         const dayEl = evt.to.closest('.day');
         if(dayEl){
           const day = data.days.find(d => d.id === dayEl.dataset.dayId);
-          if(day) day.cardExpanded = true;
+          if(day) setCardOpen(day, true);
         }
       }
       rebuildFromDOM();
@@ -1902,6 +2012,9 @@ function rebuildFromDOM(){
   data.days.forEach(oldDay=>{
     if(!seenDayIds.has(oldDay.id)) newDays.push(oldDay);
   });
+  // The on-screen order differs between phone and desktop layouts, so keep the stored order as it was.
+  const oldOrder = data.days.map(d => d.id);
+  newDays.sort((a, b)=> oldOrder.indexOf(a.id) - oldOrder.indexOf(b.id));
   data.days = newDays;
   save();
   render();
