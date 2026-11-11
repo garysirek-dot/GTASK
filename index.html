@@ -2574,6 +2574,8 @@ document.addEventListener('visibilitychange', ()=>{
   else if(cloudActive() && isDirty()) pushNow();
 });
 window.addEventListener('focus', pullIfNewer);
+// Also check for changes from your other device every 20 seconds while this page is on screen.
+setInterval(()=>{ if(document.visibilityState === 'visible') pullIfNewer(); }, 20000);
 
 updateAccountSection();
 load().then(initCloud);
