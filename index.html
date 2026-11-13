@@ -60,6 +60,9 @@
   .overlay-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
   .auth-msg{font-size:12.5px;min-height:18px;margin:2px 0 10px;color:#E5534B;}
   .auth-msg.info{color:var(--text-dim);}
+  .snap-list{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto;margin-bottom:10px;}
+  .snap-btn{text-align:left;}
+  .snap-btn small{display:block;color:var(--text-dim);font-size:11.5px;margin-top:2px;}
   .auth-skip{background:none;border:none;color:var(--text-dim);font-size:12.5px;text-decoration:underline;margin-top:12px;padding:4px;width:100%;}
   #themePicker{display:flex;flex-wrap:wrap;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);}
   .theme-option{
@@ -433,6 +436,11 @@
       <div class="data-note" id="backupMsg" style="margin:10px 0 0;"></div>
     </div>
     <div class="data-section">
+      <div class="data-title">Restore a previous version</div>
+      <div class="data-note">The app keeps automatic safety copies on this device, and your account keeps its own history. If tasks ever disappear, restore an earlier copy here.</div>
+      <div class="data-row"><button class="data-action" id="restoreBtn">Restore previous version…</button></div>
+    </div>
+    <div class="data-section">
       <div class="data-title">Reset app</div>
       <div class="data-note">Permanently deletes every task, section and setting and starts fresh. If you are signed in, this also clears your synced account data, so the other device will be reset too. Export a backup first if there is any doubt.</div>
       <div class="data-row"><button class="data-action danger" id="resetAppBtn">Reset app…</button></div>
@@ -688,6 +696,7 @@ async function load(){
 // Install a data object as the live app state (used for startup, cloud pulls and imports).
 function adoptData(obj){
   data = (obj && Array.isArray(obj.days)) ? obj : defaultData();
+  if(countTasks(data) > 0) sawContent = true;
   if(!Array.isArray(data.trash)) data.trash = [];
   data.days.forEach(d=>{
     const key = (d.label || '').trim().toUpperCase();
@@ -713,12 +722,16 @@ appTitleEl.addEventListener('blur', ()=>{
 appTitleEl.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); appTitleEl.blur(); } });
 preventIOSZoom(appTitleEl);
 
+let allowEmptyPush = false;
+let sawContent = false; // true once this page has held tasks, so deleting them all on purpose is respected
 let saveTimer = null;
 function save(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try{ await storageSet(STORAGE_KEY, JSON.stringify(data)); }
     catch(e){ console.error('save failed', e); }
+    if(countTasks(data) > 0) sawContent = true;
+    takeSnapshot('auto');
     cloudMarkDirty();
   }, 250);
 }
@@ -2078,8 +2091,10 @@ document.getElementById('resetAppBtn').addEventListener('click', async ()=>{
   const second = await askChoice('Are you absolutely sure?', 'Everything will be erased. Last chance to back out.',
     [{ label: 'No, keep my data', value: 'no', primary: true }, { label: 'Yes, erase everything', value: 'yes' }]);
   if(second !== 'yes') return;
+  takeSnapshot('before reset', true);
   recentlyAddedDayIds.clear();
   data = defaultData();
+  allowEmptyPush = true;
   save();
   document.getElementById('appTitle').textContent = data.appTitle || todaysDateTitle();
   render();
@@ -2230,6 +2245,71 @@ document.getElementById('eyeBtn').addEventListener('click', ()=>{
   }
 });
 
+// ================= Safety copies =================
+const SNAP_KEY = STORAGE_KEY + '-snaps';
+function countTasks(d){
+  let n = 0;
+  ((d && d.days) || []).forEach(day => (day.tasks || []).forEach(t => { n += 1 + ((t.subtasks || []).length); }));
+  return n;
+}
+function readSnaps(){ try{ return JSON.parse(localStorage.getItem(SNAP_KEY) || '[]'); }catch(e){ return []; } }
+function takeSnapshot(reason, force){
+  try{
+    if(typeof data === 'undefined' || !data || countTasks(data) === 0) return;
+    const snaps = readSnaps();
+    const last = snaps[0];
+    const now = Date.now();
+    const n = countTasks(data);
+    if(!force && last && (now - last.t) < 30*60*1000 && n >= last.n * 0.5) return;
+    snaps.unshift({ t: now, n: n, why: reason || 'auto', data: data });
+    while(snaps.length > 6) snaps.pop();
+    localStorage.setItem(SNAP_KEY, JSON.stringify(snaps));
+  }catch(e){ console.error('snapshot failed', e); }
+}
+function whenText(t){ try{ return new Date(t).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }); }catch(e){ return ''; } }
+
+async function openRestoreList(){
+  const items = readSnaps().map(sn => ({ label: whenText(sn.t) + ' — ' + sn.n + ' tasks', sub: 'Saved on this device (' + sn.why + ')', data: sn.data }));
+  if(cloudActive()){
+    try{
+      const r = await cloud.client.from('app_data_history').select('data,saved_at').eq('user_id', cloud.user.id).order('saved_at', { ascending: false }).limit(15);
+      if(!r.error && r.data) r.data.forEach(h => items.push({ label: whenText(h.saved_at) + ' — ' + countTasks(h.data) + ' tasks', sub: 'From your account history', data: h.data }));
+    }catch(e){}
+  }
+  if(!items.length){ await askChoice('Nothing to restore yet', 'No earlier copies were found yet. Copies are saved automatically while you use the app.', [{ label: 'OK', value: 'ok', primary: true }]); return; }
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  const card = document.createElement('div');
+  card.className = 'overlay-card';
+  card.innerHTML = '<h3>Pick a version to restore</h3><p>This replaces what is in the app right now (a safety copy of the current version is kept first).</p>';
+  const list = document.createElement('div');
+  list.className = 'snap-list';
+  items.forEach(it=>{
+    const b = document.createElement('button');
+    b.className = 'overlay-btn snap-btn';
+    b.innerHTML = '<span></span><small></small>';
+    b.firstChild.textContent = it.label;
+    b.lastChild.textContent = it.sub;
+    b.addEventListener('click', ()=>{
+      takeSnapshot('before restore', true);
+      adoptData(JSON.parse(JSON.stringify(it.data)));
+      allowEmptyPush = true;
+      save();
+      ov.remove();
+      document.getElementById('dataPanel').classList.remove('open');
+    });
+    list.appendChild(b);
+  });
+  card.appendChild(list);
+  const cancel = document.createElement('button');
+  cancel.className = 'overlay-btn';
+  cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', ()=> ov.remove());
+  card.appendChild(cancel);
+  ov.appendChild(card);
+  document.body.appendChild(ov);
+}
+
 // ================= Backup (export / import) =================
 function setBackupMsg(text){ const el = document.getElementById('backupMsg'); if(el) el.textContent = text || ''; }
 
@@ -2263,7 +2343,9 @@ async function importBackupFile(file){
     'This replaces everything currently in the app with the backup from ' + when + '. Export first if you want to keep what is here now.',
     [{ label: 'Replace with backup', value: 'yes', primary: true }, { label: 'Cancel', value: 'no' }]);
   if(choice !== 'yes') return;
+  takeSnapshot('before import', true);
   adoptData(incoming);
+  allowEmptyPush = true;
   save();
   setBackupMsg('Backup restored.');
 }
@@ -2422,6 +2504,7 @@ async function handleAuth(mode){
 }
 
 function adoptCloudRow(row){
+  takeSnapshot('before sync', true);
   adoptData(row.data);
   cloud.version = row.version;
   try{ localStorage.setItem(CLOUD_VER_KEY, String(row.version)); }catch(e){}
@@ -2492,6 +2575,16 @@ async function pushNow(){
   cloud.pushing = true;
   const snapshot = JSON.stringify(data);
   try{
+    // Never let an empty app overwrite an account that has tasks (unless you just reset or restored on purpose).
+    if(countTasks(data) === 0 && !allowEmptyPush && !sawContent){
+      const existing = await fetchRow();
+      if(existing && countTasks(existing.data) > 0){
+        cloud.pushing = false;
+        adoptCloudRow(existing);
+        setSyncStatus('ok');
+        return;
+      }
+    }
     let newVer = 0, conflict = false;
     if(!cloud.version){
       const r = await cloud.client.from('app_data').insert({ user_id: cloud.user.id, data: JSON.parse(snapshot), version: 1 });
@@ -2511,6 +2604,7 @@ async function pushNow(){
       return;
     }
     cloud.version = newVer;
+    allowEmptyPush = false;
     try{ localStorage.setItem(CLOUD_VER_KEY, String(newVer)); }catch(e){}
     if(JSON.stringify(data) === snapshot){ setDirty(false); setSyncStatus('ok'); }
     else { cloud.pushTimer = setTimeout(pushNow, 300); }
@@ -2560,8 +2654,8 @@ async function signOutFlow(){
     }
   }
   try{ await cloud.client.auth.signOut(); }catch(e){}
+  // Your tasks stay on this device after signing out; only the account link is removed.
   try{
-    localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(CLOUD_VER_KEY);
     localStorage.removeItem(CLOUD_DIRTY_KEY);
   }catch(e){}
@@ -2577,6 +2671,7 @@ document.getElementById('dataBtn').addEventListener('click', ()=>{
 document.getElementById('dataCloseBtn').addEventListener('click', ()=>{
   document.getElementById('dataPanel').classList.remove('open');
 });
+document.getElementById('restoreBtn').addEventListener('click', openRestoreList);
 document.getElementById('exportBtn').addEventListener('click', exportBackup);
 document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change', e=>{
