@@ -519,13 +519,17 @@
   </div>
 </div>
 
+<script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
 // ---- Cloud sync setup (Supabase) ----
 // Paste your own Project URL and anon/public key between the quotes to turn on login + sync.
 // Leave them as-is and the app simply keeps data in this browser.
-const SUPABASE_URL_RAW = 'https://gzbeocnfhmnqyufzzvbn.supabase.co';
-const SUPABASE_ANON_KEY_RAW = 'sb_publishable_QCwggUS2dt2o-o2NUwW-nA_bwxCP33H';
+// Your keys live in a separate file called config.js (so updating this page never wipes them).
+// Fallback: you can also paste them here.
+const APP_CONFIG = window.APP_CONFIG || {};
+const SUPABASE_URL_RAW = APP_CONFIG.supabaseUrl || 'PASTE_YOUR_PROJECT_URL_HERE';
+const SUPABASE_ANON_KEY_RAW = APP_CONFIG.supabaseAnonKey || 'PASTE_YOUR_ANON_KEY_HERE';
 // Tidy common paste mistakes: extra spaces, or a URL with a path on the end (e.g. /rest/v1/ or /dashboard/...).
 const SUPABASE_ANON_KEY = SUPABASE_ANON_KEY_RAW.trim();
 const SUPABASE_URL = (()=>{ try{ return new URL(SUPABASE_URL_RAW.trim()).origin; }catch(e){ return SUPABASE_URL_RAW.trim(); } })();
@@ -1876,6 +1880,12 @@ function attachSwipeToDelete(rowWrap, row, deleteBg, onDelete, options){
   row.addEventListener('pointercancel', ()=>{ clearLongPress(); active = false; dragging = false; });
 }
 
+// Capitalize the first letter of every word ("Pickup the dog" -> "Pickup The Dog").
+// Letters you typed capitalized stay as they are (TV, iPhone), so nothing gets lowercased.
+function titleCaseWords(str){
+  return str.replace(/(^|\s)(\S)/g, (m, sp, ch) => sp + ch.toUpperCase());
+}
+
 function startInlineAdd(ul, parentTaskId, dayId){
   const existing = ul.querySelector(':scope > li.inline-add');
   if(existing){ existing.querySelector('input').focus(); return; }
@@ -1890,6 +1900,15 @@ function startInlineAdd(ul, parentTaskId, dayId){
   input.placeholder = parentTaskId ? 'New subtask' : (addKey === 'DATES' ? 'New date' : addKey === 'LISTS' ? 'New list' : 'New task');
   input.style.cssText = 'flex:1;background:none;border:none;color:var(--text);font-size:13.5px;outline:none;';
   preventIOSZoom(input);
+  input.autocapitalize = 'words';
+  input.addEventListener('input', ()=>{
+    const fixed = titleCaseWords(input.value);
+    if(fixed !== input.value){
+      const pos = input.selectionStart;
+      input.value = fixed;
+      try{ input.setSelectionRange(pos, pos); }catch(e){}
+    }
+  });
   row.appendChild(input);
   li.appendChild(row);
   ul.appendChild(li);
@@ -1899,7 +1918,7 @@ function startInlineAdd(ul, parentTaskId, dayId){
   function finalize(reopen){
     if(committed) return;
     committed = true;
-    const val = input.value.trim();
+    const val = titleCaseWords(input.value.trim());
     li.remove();
     if(val){
       const newTask = { id: uid(), text: val, done: false, subtasks: [] };
